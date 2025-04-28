@@ -6,9 +6,9 @@
 # 这些变量可以在触发器设置中或通过 `gcloud builds submit --substitutions` 命令覆盖。
 # 使用前缀 '_' 是一种常见的用户定义替换变量的约定。
 substitutions:
-  _ARTIFACT_REGISTRY_LOCATION: 'asia-east1' # 例如: us-central1, europe-west1, asia-east1
-  _ARTIFACT_REGISTRY_REPO: 'my-docker-repo' # 您在 Artifact Registry 中创建的 Docker 仓库名称
-  _IMAGE_NAME: 'my-app' # 您应用程序/镜像的名称
+  _ARTIFACT_REGISTRY_LOCATION: 'us-central1' # 例如: us-central1, europe-west1, asia-east1
+  _ARTIFACT_REGISTRY_REPO: 'feishu-kang' # 您在 Artifact Registry 中创建的 Docker 仓库名称
+  _IMAGE_NAME: 'feishu-kang' # 您应用程序/镜像的名称
   _MAIN_BRANCH_NAME: 'main' # 您用于标记 "latest" 镜像的主分支名称 (例如 'main', 'master')
 
 # ------------------------------------------------------------------------------
