@@ -25,24 +25,4 @@ spec:
           image: FEISHU_NOTIFICATION_IMAGE_PLACEHOLDER
           ports:
             - containerPort: 8080 # 确保这与您 Dockerfile 中 EXPOSE 的端口一致
-          # (可选) 添加资源请求和限制
-          # resources:
-          #   requests:
-          #     memory: "64Mi"
-          #     cpu: "250m"
-          #   limits:
-          #     memory: "128Mi"
-          #     cpu: "500m"
-          # (可选) 添加健康检查探针
-          # livenessProbe:
-          #   httpGet:
-          #     path: /healthz # 替换为您的健康检查路径
-          #     port: 8080
-          #   initialDelaySeconds: 15
-          #   periodSeconds: 20
-          # readinessProbe:
-          #   httpGet:
-          #     path: /readyz # 替换为您的就绪检查路径
-          #     port: 8080
-          #   initialDelaySeconds: 5
-          #   periodSeconds: 10
+
