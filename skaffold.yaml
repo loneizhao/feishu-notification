@@ -1,24 +1,26 @@
 # skaffold.yaml
-apiVersion: skaffold/v4beta7 # 推荐使用较新的稳定版本
+apiVersion: skaffold/v4beta7 # 或更新的稳定版本
 kind: Config
 metadata:
-  name: feishu-notification-skaffold # Skaffold 配置的名称
+  name: feishu-notification-skaffold
 
-# 'build' 部分定义了 Skaffold 如何识别镜像。
-# 在这个场景中，Cloud Build 负责实际构建 Docker 镜像。
-# Skaffold 只需要知道一个逻辑名称，以便将其映射到 Kubernetes 清单中的占位符。
-build:
-  artifacts:
-    - image: FEISHU_NOTIFICATION_IMAGE_PLACEHOLDER # 逻辑镜像名称
-      # 此处不需要 context 或 dockerfile，因为 Cloud Build 会构建。
-      # 这个名称必须与您 k8s/deployment.yaml 文件中容器的 image 字段占位符完全一致。
+# 由于镜像是通过 Cloud Build 构建并由 'gcloud deploy releases create --images' 传递的，
+# 'build' 部分可以省略或留空，Skaffold 将专注于部署。
+# build:
+#   artifacts: [] # 或者完全省略 build 部分
 
-# 'deploy' 部分告诉 Skaffold 如何部署应用。
-# 我们使用 kubectl 来应用 Kubernetes 清单文件。
+manifests:
+  # 'rawYaml' 用于直接指定 Kubernetes YAML 文件。
+  # 如果您将所有 K8s 配置合并到一个文件 (例如 k8s/kubernetes.yaml):
+  # rawYaml:
+  #  - k8s/kubernetes.yaml
+  # 如果您有多个独立的 YAML 文件在 k8s/ 目录下:
+  rawYaml:
+    - k8s/deployment.yaml
+    - k8s/service.yaml
+    # - k8s/configmap.yaml # 如果有其他文件
+
+# 'deploy.kubectl' 告诉 Skaffold 使用 kubectl 来应用这些清单。
+# 空的 {} 表示使用默认的 kubectl 部署行为。
 deploy:
-  kubectl:
-    manifests:
-      - k8s/deployment.yaml   # 指向您的 Deployment 清单文件
-      - k8s/service.yaml    # 指向您的 Service 清单文件
-      # 如果有其他 Kubernetes 清单文件 (如 ConfigMap, Secret 等)，也在此处列出
-      # 例如: - k8s/configmap.yaml
+  kubectl: {}
