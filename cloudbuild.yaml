@@ -87,6 +87,36 @@ steps:
           echo "当前分支是 $BRANCH_NAME (不是 ${_MAIN_BRANCH_NAME})，跳过标记 latest 镜像。"
         fi
 
+
+  # --- 新增步骤：创建 Cloud Deploy Release ---
+  # 此步骤将在 Cloud Build 成功构建并推送镜像后执行
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: '创建 Cloud Deploy Release'
+    entrypoint: 'gcloud'
+    args:
+      - 'deploy'
+      - 'releases'
+      - 'create'
+      - '${_IMAGE_NAME}-release-$SHORT_SHA' # 为 Release 创建一个唯一的名称，例如使用镜像名和提交SHA
+      - '--project=$PROJECT_ID'
+      - '--delivery-pipeline=${_CD_PIPELINE}'
+      - '--region=${_CD_REGION}'
+      - '--skaffold-file=${_SKAFFOLD_FILE_PATH}'
+      # 关键部分：将 Cloud Build 构建的镜像 URI 传递给 Cloud Deploy。
+      # 这里的键名 (`${_SKAFFOLD_LOGICAL_IMAGE_NAME}`) 必须与您 skaffold.yaml 文件中
+      # build.artifacts[].image 定义的逻辑镜像名称完全匹配。
+      - '--build-artifacts-passthrough=${_SKAFFOLD_LOGICAL_IMAGE_NAME}=${_ARTIFACT_REGISTRY_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REGISTRY_REPO}/${_IMAGE_NAME}:$SHORT_SHA'
+      # (可选) 添加描述或注解
+      # - '--description="Release triggered by Cloud Build $BUILD_ID for branch $BRANCH_NAME"'
+      # - '--annotations=commit_sha=$SHORT_SHA,branch=$BRANCH_NAME'
+      # (可选) 如果您的 skaffold.yaml 或 K8s 清单不在仓库根目录，可能需要 --source
+      # - '--source=.' # 将当前工作目录（包含 skaffold.yaml 和 k8s 清单）作为源进行打包
+    waitFor:
+      - '推送 Docker 镜像 (SHA 标记)' # 确保镜像已推送
+      # 如果您希望 'latest' 标签的推送也完成后再创建 Release，可以添加：
+      # - '标记并推送 latest 镜像 (如果主分支)'
+
+# ----------
 # ------------------------------------------------------------------------------
 # 声明构建产出的镜像 (Images)
 # ------------------------------------------------------------------------------
