@@ -8,7 +8,7 @@ metadata:
   # Cloud Deploy 会自动将交付流水线和目标信息作为注解添加进来
   # namespace: your-namespace # 如果您使用特定命名空间，请取消注释并指定
 spec:
-  replicas: 2 # 您希望运行的 Pod 数量
+  replicas: 1 # 您希望运行的 Pod 数量
   selector:
     matchLabels:
       app: feishu-notification
