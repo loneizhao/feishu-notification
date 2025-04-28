@@ -1,0 +1,15 @@
+# k8s/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: feishu-deployment
+spec:
+  # ...
+  template:
+    # ...
+    spec:
+      containers:
+        - name: feishu-container
+          image: MY_APP_IMAGE_PLACEHOLDER
+          ports:
+            - containerPort: 8080
