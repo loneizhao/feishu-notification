@@ -41,6 +41,3 @@ strategy:
       percentages: [25, 50] # 例如：先部署 25%，然后到 50%，最后（通过推进）到 100%（稳定版）
       verify: true          # 设置为 true 会在每个百分比阶段后暂停，等待人工验证或自动化验证（如果配置了验证作业）
                             # 设置为 false 则会自动进入下一个百分比阶段或稳定阶段（不推荐用于生产）
-      # (可选) 配置 Cloud Deploy 验证作业
-      # verificationExpectations:
-      #   - name: "my-verification-job" # 指向一个 VerificationJob 资源
