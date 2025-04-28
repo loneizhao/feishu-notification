@@ -1,15 +1,46 @@
-# k8s/deployment.yaml
-apiVersion: apps/v1
-kind: Deployment
+# clouddeploy-pipeline.yaml
+apiVersion: deploy.cloud.google.com/v1
+kind: DeliveryPipeline
 metadata:
-  name: feishu-deployment
-spec:
-  # ...
-  template:
-    # ...
-    spec:
-      containers:
-        - name: feishu-container
-          image: MY_APP_IMAGE_PLACEHOLDER
-          ports:
-            - containerPort: 8080
+  name: feishu-notification-pipeline # 与您 cloudbuild.yaml 中的 _CD_PIPELINE 匹配
+  description: Feishu Notification Application Delivery Pipeline
+serialPipeline:
+  stages:
+    - targetId: feishu-prod-target # 指向下面定义的 Target
+      profiles: [] # 您可以在此指定 Skaffold profiles (如果使用的话)
+      # 此处不直接定义 strategy，strategy 定义在 Target 资源中
+
+---
+apiVersion: deploy.cloud.google.com/v1
+kind: Target
+metadata:
+  name: feishu-prod-target # Target ID，也需要在 DeliveryPipeline 中引用
+  description: Production GKE Cluster for Feishu Notification
+  # (可选) 添加注解和标签
+  # annotations:
+  #   key: value
+gke:
+  # 替换为您的 GKE 集群的完整路径
+  cluster: projects/YOUR_PROJECT_ID/locations/YOUR_GKE_CLUSTER_REGION_OR_ZONE/clusters/YOUR_GKE_CLUSTER_NAME
+  # (可选) 如果您希望部署到 GKE 集群的特定命名空间，取消注释并指定
+  # namespace: feishu-namespace
+strategy:
+  canary:
+    runtimeConfig:
+      kubernetes:
+        serviceNetworking:
+          # 'service' 字段必须与您的 k8s/service.yaml 中 metadata.name 的值完全匹配
+          service: "feishu-notification-service"
+          # 'deployment' 字段必须与您的 k8s/deployment.yaml 中 metadata.name 的值完全匹配
+          deployment: "feishu-notification-deployment"
+          # (可选) 如果您的 Service 使用非默认的端口进行流量分割，可以配置
+          # deploymentNamespace: your-namespace # 如果 deployment 不在 target 的默认命名空间
+          # serviceNamespace: your-namespace # 如果 service 不在 target 的默认命名空间
+    # 定义 Canary 部署的阶段
+    canaryDeployment:
+      percentages: [25, 50] # 例如：先部署 25%，然后到 50%，最后（通过推进）到 100%（稳定版）
+      verify: true          # 设置为 true 会在每个百分比阶段后暂停，等待人工验证或自动化验证（如果配置了验证作业）
+                            # 设置为 false 则会自动进入下一个百分比阶段或稳定阶段（不推荐用于生产）
+      # (可选) 配置 Cloud Deploy 验证作业
+      # verificationExpectations:
+      #   - name: "my-verification-job" # 指向一个 VerificationJob 资源
