@@ -1,0 +1,48 @@
+# k8s/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: feishu-notification-deployment
+  labels:
+    app: feishu-notification
+  # Cloud Deploy 会自动将交付流水线和目标信息作为注解添加进来
+  # namespace: your-namespace # 如果您使用特定命名空间，请取消注释并指定
+spec:
+  replicas: 2 # 您希望运行的 Pod 数量
+  selector:
+    matchLabels:
+      app: feishu-notification
+  template:
+    metadata:
+      labels:
+        app: feishu-notification
+        # Cloud Deploy 会为 Canary 版本添加特定标签 (例如 track: canary/stable)
+    spec:
+      containers:
+        - name: feishu-notification-container
+          # 这里的 'FEISHU_NOTIFICATION_IMAGE_PLACEHOLDER' 是一个逻辑占位符。
+          # Skaffold (由 Cloud Deploy 调用) 会将其替换为 Cloud Build 构建的实际镜像 URI。
+          image: FEISHU_NOTIFICATION_IMAGE_PLACEHOLDER
+          ports:
+            - containerPort: 8080 # 确保这与您 Dockerfile 中 EXPOSE 的端口一致
+          # (可选) 添加资源请求和限制
+          # resources:
+          #   requests:
+          #     memory: "64Mi"
+          #     cpu: "250m"
+          #   limits:
+          #     memory: "128Mi"
+          #     cpu: "500m"
+          # (可选) 添加健康检查探针
+          # livenessProbe:
+          #   httpGet:
+          #     path: /healthz # 替换为您的健康检查路径
+          #     port: 8080
+          #   initialDelaySeconds: 15
+          #   periodSeconds: 20
+          # readinessProbe:
+          #   httpGet:
+          #     path: /readyz # 替换为您的就绪检查路径
+          #     port: 8080
+          #   initialDelaySeconds: 5
+          #   periodSeconds: 10
