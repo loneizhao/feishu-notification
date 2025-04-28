@@ -1,0 +1,16 @@
+# k8s/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: feishu-notification-service
+  labels:
+    app: feishu-notification
+  # namespace: your-namespace # 如果您使用特定命名空间，请取消注释并指定
+spec:
+  type: LoadBalancer # 或者 ClusterIP / NodePort，根据您的需求选择
+  selector:
+    app: feishu-notification # 这必须匹配 Deployment template 中的标签
+  ports:
+    - protocol: TCP
+      port: 80       # Service 暴露的端口
+      targetPort: 8080 # Pod 容器实际监听的端口
