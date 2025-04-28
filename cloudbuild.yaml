@@ -10,6 +10,11 @@ substitutions:
   _ARTIFACT_REGISTRY_REPO: 'feishu-kang' # 您在 Artifact Registry 中创建的 Docker 仓库名称
   _IMAGE_NAME: 'feishu-kang' # 您应用程序/镜像的名称
   _MAIN_BRANCH_NAME: 'main' # 您用于标记 "latest" 镜像的主分支名称 (例如 'main', 'master')
+  _CD_PIPELINE: 'feishu-notification-pipeline'
+  _CD_REGION: 'us-central1' # 或者是您 Cloud Deploy 流水线实际所在的区域
+  _SKAFFOLD_FILE_PATH: 'skaffold.yaml'
+  _SKAFFOLD_LOGICAL_IMAGE_NAME: 'FEISHU_NOTIFICATION_IMAGE_PLACEHOLDER'
+
 
 # ------------------------------------------------------------------------------
 # 构建步骤 (Steps)
