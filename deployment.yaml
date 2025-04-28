@@ -21,7 +21,7 @@ metadata:
   #   key: value
 gke:
   # 替换为您的 GKE 集群的完整路径
-  cluster: projects/YOUR_PROJECT_ID/locations/YOUR_GKE_CLUSTER_REGION_OR_ZONE/clusters/YOUR_GKE_CLUSTER_NAME
+  cluster: projects/kangzhao/locations/us-central1-c/clusters/cluster-1
   # (可选) 如果您希望部署到 GKE 集群的特定命名空间，取消注释并指定
   # namespace: feishu-namespace
 strategy:
