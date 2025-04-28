@@ -1,0 +1,109 @@
+# cloudbuild.yaml
+
+# ------------------------------------------------------------------------------
+# 定义替换变量 (Substitutions)
+# ------------------------------------------------------------------------------
+# 这些变量可以在触发器设置中或通过 `gcloud builds submit --substitutions` 命令覆盖。
+# 使用前缀 '_' 是一种常见的用户定义替换变量的约定。
+substitutions:
+  _ARTIFACT_REGISTRY_LOCATION: 'asia-east1' # 例如: us-central1, europe-west1, asia-east1
+  _ARTIFACT_REGISTRY_REPO: 'my-docker-repo' # 您在 Artifact Registry 中创建的 Docker 仓库名称
+  _IMAGE_NAME: 'my-app' # 您应用程序/镜像的名称
+  _MAIN_BRANCH_NAME: 'main' # 您用于标记 "latest" 镜像的主分支名称 (例如 'main', 'master')
+
+# ------------------------------------------------------------------------------
+# 构建步骤 (Steps)
+# ------------------------------------------------------------------------------
+steps:
+  # (可选) 步骤 0: 运行单元测试
+  # 取消注释并根据您的项目进行配置。
+  # 确保您的代码库中包含必要的测试脚本和依赖文件 (例如 package.json, pom.xml, requirements.txt).
+  # - name: 'gcr.io/cloud-builders/npm' # Node.js 示例
+  #   id: '单元测试'
+  #   entrypoint: 'npm'
+  #   args: ['install']
+  # - name: 'gcr.io/cloud-builders/npm'
+  #   entrypoint: 'npm'
+  #   args: ['test']
+  #
+  # - name: 'maven:3.8-openjdk-11' # Java Maven 示例
+  #   id: '单元测试 (Java)'
+  #   entrypoint: 'mvn'
+  #   args: ['test']
+  #
+  # - name: 'python:3.9' # Python 示例
+  #   id: '单元测试 (Python)'
+  #   entrypoint: 'bash'
+  #   args:
+  #     - -c
+  #     - |
+  #       pip install -r requirements-dev.txt
+  #       pytest
+
+  # 步骤 1: 构建 Docker 镜像
+  # 此步骤使用 'docker' 云构建器来构建镜像。
+  # 假设您的代码库根目录中有一个 Dockerfile。
+  # 镜像将使用短提交 SHA (SHORT_SHA) 进行标记。
+  - name: 'gcr.io/cloud-builders/docker'
+    id: '构建 Docker 镜像'
+    args:
+      - 'build'
+      - '-t'
+      - '${_ARTIFACT_REGISTRY_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REGISTRY_REPO}/${_IMAGE_NAME}:$SHORT_SHA'
+      - '-t' # 额外标记一个，方便后续引用
+      - '${_ARTIFACT_REGISTRY_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REGISTRY_REPO}/${_IMAGE_NAME}:temp_build'
+      - '.' # Docker 构建上下文 (当前目录)
+    # waitFor: ['单元测试'] # 如果启用了测试步骤，则取消注释此行
+
+  # 步骤 2: 将 Docker 镜像推送到 Google Artifact Registry
+  # 此步骤推送在上一步中构建并使用 SHORT_SHA 标记的镜像。
+  #
+  # 重要提示:
+  # 1. 确保在您的 GCP 项目中启用了 Artifact Registry API。
+  # 2. 确保 Cloud Build 服务账号 (通常是 YOUR_PROJECT_NUMBER@cloudbuild.gserviceaccount.com)
+  #    具有目标 Artifact Registry 仓库的 "Artifact Registry Writer" (roles/artifactregistry.writer) 角色。
+  - name: 'gcr.io/cloud-builders/docker'
+    id: '推送 Docker 镜像 (SHA 标记)'
+    args:
+      - 'push'
+      - '${_ARTIFACT_REGISTRY_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REGISTRY_REPO}/${_IMAGE_NAME}:$SHORT_SHA'
+
+  # 步骤 3: (可选) 如果是主分支，则将镜像标记为 'latest' 并推送
+  # 仅当构建是在指定的主分支 (例如 'main' 或 'master') 上运行时，此步骤才会执行。
+  - name: 'gcr.io/cloud-builders/docker'
+    id: '标记并推送 latest 镜像 (如果主分支)'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        # $BRANCH_NAME 是 Cloud Build 提供的内置替换变量
+        if [ "$BRANCH_NAME" = "${_MAIN_BRANCH_NAME}" ]; then
+          echo "当前分支是 ${_MAIN_BRANCH_NAME}，标记并推送 latest 镜像..."
+          docker tag \
+            ${_ARTIFACT_REGISTRY_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REGISTRY_REPO}/${_IMAGE_NAME}:temp_build \
+            ${_ARTIFACT_REGISTRY_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REGISTRY_REPO}/${_IMAGE_NAME}:latest
+          docker push ${_ARTIFACT_REGISTRY_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REGISTRY_REPO}/${_IMAGE_NAME}:latest
+        else
+          echo "当前分支是 $BRANCH_NAME (不是 ${_MAIN_BRANCH_NAME})，跳过标记 latest 镜像。"
+        fi
+
+# ------------------------------------------------------------------------------
+# 声明构建产出的镜像 (Images)
+# ------------------------------------------------------------------------------
+# (可选但推荐) 列出此构建将创建并推送到 Artifact Registry 的 Docker 镜像。
+# 这有助于 Cloud Build 优化上传，并在构建详情中显示这些镜像。
+images:
+  - '${_ARTIFACT_REGISTRY_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REGISTRY_REPO}/${_IMAGE_NAME}:$SHORT_SHA'
+  # 如果上一步的 'latest' 标记和推送成功执行，可以取消注释下面这行 (或动态添加)
+  # - '${_ARTIFACT_REGISTRY_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REGISTRY_REPO}/${_IMAGE_NAME}:latest'
+
+# ------------------------------------------------------------------------------
+# 构建超时设置 (Options)
+# ------------------------------------------------------------------------------
+options:
+  # 设置构建的全局超时时间。默认是 10 分钟。
+  # machineType: 'N1_HIGHCPU_8' # (可选) 为构建作业指定更高性能的机器类型
+  # diskSizeGb: 100 # (可选) 为构建作业指定更大的磁盘空间
+  logging: CLOUD_LOGGING_ONLY # (可选) 将日志发送到 Cloud Logging
+
+timeout: '1200s' # 20 分钟超时
