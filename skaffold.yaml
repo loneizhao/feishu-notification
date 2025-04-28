@@ -1,26 +1,38 @@
 # skaffold.yaml
-apiVersion: skaffold/v4beta7 # 或更新的稳定版本
+apiVersion: skaffold/v4beta7 # 或您环境中 Skaffold 的版本
 kind: Config
 metadata:
   name: feishu-notification-skaffold
 
-# 由于镜像是通过 Cloud Build 构建并由 'gcloud deploy releases create --images' 传递的，
-# 'build' 部分可以省略或留空，Skaffold 将专注于部署。
-# build:
-#   artifacts: [] # 或者完全省略 build 部分
-
 manifests:
-  # 'rawYaml' 用于直接指定 Kubernetes YAML 文件。
-  # 如果您将所有 K8s 配置合并到一个文件 (例如 k8s/kubernetes.yaml):
-  # rawYaml:
-  #  - k8s/kubernetes.yaml
-  # 如果您有多个独立的 YAML 文件在 k8s/ 目录下:
   rawYaml:
     - k8s/deployment.yaml
     - k8s/service.yaml
-    # - k8s/configmap.yaml # 如果有其他文件
 
-# 'deploy.kubectl' 告诉 Skaffold 使用 kubectl 来应用这些清单。
-# 空的 {} 表示使用默认的 kubectl 部署行为。
 deploy:
   kubectl: {}
+
+# --- 新增或补充 verify 部分 ---
+verify:
+  - name: check-feishu-app-is-healthy # 验证测试的名称
+    container:
+      name: health-checker-container
+      image: alpine/curl # 示例：使用 curl 镜像
+      command: ["/bin/sh", "-c"]
+      args:
+        - |
+          echo "Verifying deployment..."
+          # 假设您的服务名为 feishu-notification-service，在 default 命名空间，端口为 8080，健康检查路径为 /healthz
+          # 请根据您的实际情况修改URL
+          # 这个脚本会尝试5次，每次间隔5秒，如果成功则退出码为0，否则为1
+          apk add --no-cache curl # alpine/curl 默认可能不带curl，或者选用带curl的镜像如 curlimages/curl
+          for i in 1 2 3 4 5; do
+            if curl -s -f http://feishu-notification-service.default.svc.cluster.local:8080/healthz; then
+              echo "Verification successful on attempt $i."
+              exit 0
+            fi
+            echo "Verification attempt $i failed. Retrying in 5 seconds..."
+            sleep 5
+          done
+          echo "Verification failed after 5 attempts."
+          exit 1
